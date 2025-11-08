@@ -1,3 +1,7 @@
+#include "hardware_drivers/pmu.h"
+#include "hardware_drivers/display.h"
+#include "hardware_drivers/touch.h"
+#include "hardware_drivers/sensors.h"
 #include "core/commandline.h"
 #include "core/serial_manager.h"
 #include "core/system_manager.h"
@@ -10,63 +14,23 @@
 #ifndef CONFIG_IDF_TARGET_ESP32S2
 #include "managers/ble_manager.h"
 #endif
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
 #include <esp_log.h>
-#include "nvs_flash.h"
-
-// New hardware components
-#include "board_config.h"
-#include "pmu.h"
-#include "display.h"
-#include "touch.h"
-#include "sensors.h"
-
-// LVGL UI
-#include "lvgl.h"
-static lv_obj_t *time_label;
-static lv_obj_t *battery_label;
-
-static void update_ui_task(void *pvParameter) {
-    while (1) {
-        // Update time
-        lv_label_set_text(time_label, rtc_get_time());
-
-        // Update battery
-        char buf[32];
-        sprintf(buf, "%.2fV", pmu_get_battery_voltage());
-        lv_label_set_text(battery_label, buf);
-
-        lv_task_handler();
-        vTaskDelay(pdMS_TO_TICKS(10));
-    }
-}
-
 
 #ifdef CONFIG_WITH_ETHERNET
 // TODO
 #endif
 
 #ifdef CONFIG_WITH_SCREEN
-#include "managers/views/splash_screen.h"
+#include "managers/views/smartwatch_screen.h"
 #endif
 
 int ieee80211_raw_frame_sanity_check(int32_t arg, int32_t arg2, int32_t arg3) { return 0; }
 
 void app_main(void) {
-    // Initialize NVS
-    esp_err_t ret = nvs_flash_init();
-    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
-        ESP_ERROR_CHECK(nvs_flash_erase());
-        ret = nvs_flash_init();
-    }
-    ESP_ERROR_CHECK(ret);
-
-    // Initialize hardware
+    // Initialize new hardware drivers
     pmu_init();
-    display_init();
-    touch_init();
     sensors_init();
+    // display_init() and touch_init() are called from display_manager
 
     serial_manager_init();
     wifi_manager_init();
@@ -113,7 +77,8 @@ void app_main(void) {
 #endif
 
     display_manager_init();
-    display_manager_switch_view(&splash_view);
+    smartwatch_screen_init();
+    display_manager_switch_view(&smartwatch_screen);
 #endif
 
 #ifdef CONFIG_LED_DATA_PIN
@@ -133,14 +98,4 @@ void app_main(void) {
 #endif
 
     printf("Ghost ESP Ready ;)\n");
-
-    // Create smartwatch UI
-    time_label = lv_label_create(lv_scr_act());
-    lv_obj_align(time_label, LV_ALIGN_TOP_MID, 0, 10);
-
-    battery_label = lv_label_create(lv_scr_act());
-    lv_obj_align(battery_label, LV_ALIGN_TOP_RIGHT, -10, 10);
-
-    // Create task to update UI
-    xTaskCreate(update_ui_task, "update_ui_task", 4096, NULL, 5, NULL);
 }
