@@ -93,8 +93,8 @@ void serial_manager_init() {
 
 #if JTAG_SUPPORTED
   usb_serial_jtag_driver_config_t usb_serial_jtag_config = {
-      .rx_buffer_size = BUF_SIZE,
       .tx_buffer_size = BUF_SIZE,
+      .rx_buffer_size = BUF_SIZE,
   };
   usb_serial_jtag_driver_install(&usb_serial_jtag_config);
 #endif

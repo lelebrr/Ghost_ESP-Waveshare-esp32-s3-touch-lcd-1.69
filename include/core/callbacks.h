@@ -11,7 +11,7 @@
 
 // nimble
 #ifndef CONFIG_IDF_TARGET_ESP32S2
-#include "host/ble_gap.h"
+#include <BLEDevice.h>
 #endif
 
 #define MAX_PINEAP_NETWORKS 20
@@ -57,8 +57,8 @@ void wifi_probe_scan_callback(void *buf, wifi_promiscuous_pkt_type_t type);
 void wifi_raw_scan_callback(void *buf, wifi_promiscuous_pkt_type_t type);
 void wifi_eapol_scan_callback(void *buf, wifi_promiscuous_pkt_type_t type);
 void wardriving_scan_callback(void *buf, wifi_promiscuous_pkt_type_t type);
-void ble_wardriving_callback(struct ble_gap_event *event, void *arg);
-void ble_skimmer_scan_callback(struct ble_gap_event *event, void *arg);
+void ble_wardriving_callback(void *event, void *arg);
+void ble_skimmer_scan_callback(void *event, void *arg);
 void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base,
                        int32_t event_id, void *event_data);
 void wifi_stations_sniffer_callback(void *buf,
