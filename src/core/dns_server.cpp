@@ -41,14 +41,14 @@ typedef struct __attribute__((__packed__)) {
 // DNS Question Packet
 typedef struct {
   uint16_t type;
-  uint16_t class;
+  uint16_t dns_class;
 } dns_question_t;
 
 // DNS Answer Packet
 typedef struct __attribute__((__packed__)) {
   uint16_t ptr_offset;
   uint16_t type;
-  uint16_t class;
+  uint16_t dns_class;
   uint32_t ttl;
   uint16_t addr_len;
   uint32_t ip_addr;
@@ -141,7 +141,7 @@ static int parse_dns_request(char *req, size_t req_len, char *dns_reply,
 
     dns_question_t *question = (dns_question_t *)(name_end_ptr);
     uint16_t qd_type = ntohs(question->type);
-    uint16_t qd_class = ntohs(question->class);
+    uint16_t qd_class = ntohs(question->dns_class);
 
     ESP_LOGD(TAG, "Received type: %d | Class: %d | Question for: %s", qd_type,
              qd_class, name);
@@ -175,7 +175,7 @@ static int parse_dns_request(char *req, size_t req_len, char *dns_reply,
 
       answer->ptr_offset = htons(0xC000 | (cur_qd_ptr - dns_reply));
       answer->type = htons(qd_type);
-      answer->class = htons(qd_class);
+      answer->dns_class = htons(qd_class);
       answer->ttl = htonl(ANS_TTL_SEC);
 
       ESP_LOGD(TAG, "Answer with PTR offset: 0x%" PRIX16 " and IP 0x%" PRIX32,
@@ -197,7 +197,7 @@ void dns_server_task(void *pvParameters) {
   char addr_str[128];
   int addr_family;
   int ip_protocol;
-  dns_server_handle_t handle = pvParameters;
+  dns_server_handle_t handle = (dns_server_handle_t)pvParameters;
 
   while (handle->started) {
 
@@ -279,7 +279,7 @@ void dns_server_task(void *pvParameters) {
 
 dns_server_handle_t start_dns_server(dns_server_config_t *config) {
   dns_server_handle_t handle =
-      calloc(1, sizeof(struct dns_server_handle) +
+      (dns_server_handle_t)calloc(1, sizeof(struct dns_server_handle) +
                     config->num_of_entries * sizeof(dns_entry_pair_t));
   ESP_RETURN_ON_FALSE(handle, NULL, TAG,
                       "Failed to allocate dns server handle");

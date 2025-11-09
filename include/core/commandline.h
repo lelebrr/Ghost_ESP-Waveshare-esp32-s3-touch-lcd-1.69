@@ -7,7 +7,6 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "lvgl.h"
-#include "esp_lcd_touch.h"
 
 // Define the function pointer type for commands
 typedef void (*CommandFunction)(int argc, char **argv);

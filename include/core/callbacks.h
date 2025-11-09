@@ -8,7 +8,6 @@
 #include <esp_timer.h>
 #include <time.h>
 #include "lvgl.h"
-#include "esp_lcd_touch.h"
 
 // nimble
 #ifndef CONFIG_IDF_TARGET_ESP32S2

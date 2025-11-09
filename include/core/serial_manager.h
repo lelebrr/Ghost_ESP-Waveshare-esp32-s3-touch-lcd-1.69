@@ -3,6 +3,7 @@
 #ifndef SERIAL_MANAGER_H
 #define SERIAL_MANAGER_H
 
+#include <Arduino.h>
 #include <esp_types.h>
 #include <managers/display_manager.h>
 #include <freertos/queue.h>
