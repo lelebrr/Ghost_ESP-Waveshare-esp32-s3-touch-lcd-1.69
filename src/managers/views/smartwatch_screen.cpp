@@ -1,6 +1,6 @@
 #include "smartwatch_screen.h"
-#include "hardware_drivers/sensors.h"
-#include "hardware_drivers/pmu.h"
+#include "sensors.h"
+#include "pmu.h"
 
 lv_obj_t *smartwatch_screen;
 static lv_obj_t *time_label;

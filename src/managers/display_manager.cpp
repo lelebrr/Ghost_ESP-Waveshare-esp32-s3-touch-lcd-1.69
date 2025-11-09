@@ -13,8 +13,8 @@
 #include <stdlib.h>
 
 // New hardware drivers
-#include "hardware_drivers/display.h"
-#include "hardware_drivers/touch.h"
+#include "display.h"
+#include "touch.h"
 
 
 #define LVGL_TASK_PERIOD_MS 5
