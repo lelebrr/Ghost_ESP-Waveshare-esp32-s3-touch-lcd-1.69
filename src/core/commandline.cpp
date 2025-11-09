@@ -1310,8 +1310,8 @@ void handle_apcred(int argc, char **argv) {
     wifi_config_t ap_config = {
         .ap = {
             .ssid_len = strlen(new_ssid),
-            .max_connection = 4,
-            .authmode = WIFI_AUTH_WPA2_PSK
+            .authmode = WIFI_AUTH_WPA2_PSK,
+            .max_connection = 4
         },
     };
     strcpy((char *)ap_config.ap.ssid, new_ssid);

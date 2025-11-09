@@ -42,12 +42,7 @@ static bool ssid_hash_exists(pineap_network_t *network, uint32_t hash);
 static void trim_trailing(char *str);
 static bool compare_bssid(const uint8_t *bssid1, const uint8_t *bssid2);
 static bool is_beacon_packet(const wifi_promiscuous_pkt_t *pkt);
-static const char *SKIMMER_TAG = "SKIMMER_DETECT";
-static const char *suspicious_names[] = {
-    "HC-03", "HC-05", "HC-06",  "HC-08",    "BT-HC05", "JDY-31",
-    "AT-09", "HM-10", "CC41-A", "MLT-BT05", "SPP-CA",  "FFD0"};
 
-#define MAX_WPS_NETWORKS 20
 wps_network_t detected_wps_networks[MAX_WPS_NETWORKS];
 int detected_network_count = 0;
 esp_timer_handle_t stop_timer;
@@ -377,7 +372,7 @@ void wifi_pineap_detector_callback(void *buf, wifi_promiscuous_pkt_type_t type) 
                     return;
 
                 memcpy(log_data->bssid, network->bssid, 6);
-                log_data->network = (struct pineap_network_t*)network; // Pass network pointer for up-to-date info
+                log_data->network = (pineap_network_t*)network; // Pass network pointer for up-to-date info
 
                 BaseType_t result = xTaskCreate(log_pineap_detection, "pineap_log", 4096, log_data,
                                                 1, &network->log_task_handle);
@@ -761,4 +756,30 @@ void wifi_wps_detection_callback(void *buf, wifi_promiscuous_pkt_type_t type) {
         index += (2 + ie_len);
     }
 }
+
+#ifndef CONFIG_IDF_TARGET_ESP32S2
+#ifdef DISABLED_FOR_NOW
+// Forward declare the struct and callback before use
+struct ble_hs_adv_field;
+static int ble_hs_adv_parse_fields_cb(const struct ble_hs_adv_field *field, void *arg);
+
+void ble_wardriving_callback(void *event, void *arg) {
+
+}
+
+// Move the callback implementation inside the ESP32S2 guard
+static int ble_hs_adv_parse_fields_cb(const struct ble_hs_adv_field *field, void *arg) {
+    return 0;
+}
+#endif
+#endif
+
+// wrap for esp32s2
+#ifndef CONFIG_IDF_TARGET_ESP32S2
+#ifdef DISABLED_FOR_NOW
+static const int suspicious_names_count = sizeof(suspicious_names) / sizeof(suspicious_names[0]);
+void ble_skimmer_scan_callback(void *event, void *arg) {
+
+}
+#endif
 #endif

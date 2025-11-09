@@ -7,52 +7,56 @@
 
 class LGFX : public lgfx::LGFX_Device
 {
-public:
-    lgfx::Bus_QSPI _bus;
-    lgfx::Panel_Device _panel;
-    lgfx::Touch_FT5x06 _touch; // FT5x06 is often compatible with FT3168
+    lgfx::Bus_QSPI _bus_instance;
+    lgfx::Panel_SH8601 _panel_instance;
+    lgfx::Touch_FT5x06 _touch_instance;
 
+public:
     LGFX(void)
     {
-        // Bus configuration
-        _bus.config({
-            .spi_host = SPI2_HOST,
-            .spi_sclk = LCD_SCLK,
-            .spi_mosi = LCD_SDIO0,
-            .spi_miso = LCD_SDIO1,
-            .spi_quadwp = LCD_SDIO2,
-            .spi_quadhd = LCD_SDIO3,
-            .freq_write = 80000000,
-            .freq_read = 16000000,
-        });
-        _panel.setBus(&_bus);
+        {
+            auto cfg = _bus_instance.config();
+            cfg.spi_host = SPI2_HOST;
+            cfg.spi_sclk = LCD_SCLK;
+            cfg.spi_mosi = LCD_SDIO0;
+            cfg.spi_miso = LCD_SDIO1;
+            cfg.spi_quadwp = LCD_SDIO2;
+            cfg.spi_quadhd = LCD_SDIO3;
+            cfg.freq_write = 80000000;
+            cfg.freq_read = 16000000;
+            _bus_instance.config(cfg);
+            _panel_instance.setBus(&_bus_instance);
+        }
 
-        // Panel configuration
-        _panel.config({
-            .pin_cs = LCD_CS,
-            .pin_rst = -1,
-            .pin_busy = -1,
-            .panel_width = TFT_WIDTH,
-            .panel_height = TFT_HEIGHT,
-            .offset_x = 0,
-            .offset_y = 0,
-            .bus_shared = false,
-        });
-        setPanel(&_panel);
+        {
+            auto cfg = _panel_instance.config();
+            cfg.pin_cs = LCD_CS;
+            cfg.pin_rst = -1;
+            cfg.pin_busy = -1;
+            cfg.panel_width = TFT_WIDTH;
+            cfg.panel_height = TFT_HEIGHT;
+            cfg.offset_x = 0;
+            cfg.offset_y = 0;
+            cfg.bus_shared = false;
+            _panel_instance.config(cfg);
+        }
 
-        // Touch configuration
-        _touch.config({
-            .i2c_port = I2C_NUM_0,
-            .i2c_addr = 0x38, // Standard FT5x06 address, might be the same
-            .pin_sda = I2C_SDA,
-            .pin_scl = I2C_SCL,
-            .freq = 400000,
-            .x_min = 0,
-            .x_max = TFT_WIDTH,
-            .y_min = 0,
-            .y_max = TFT_HEIGHT,
-        });
-        _panel.setTouch(&_touch);
+        {
+            auto cfg = _touch_instance.config();
+            cfg.i2c_port = 0;
+            cfg.i2c_addr = 0x38;
+            cfg.pin_sda = I2C_SDA;
+            cfg.pin_scl = I2C_SCL;
+            cfg.freq = 400000;
+            cfg.x_min = 0;
+            cfg.x_max = TFT_WIDTH;
+            cfg.y_min = 0;
+            cfg.y_max = TFT_HEIGHT;
+            _touch_instance.config(cfg);
+            _panel_instance.setTouch(&_touch_instance);
+        }
+
+        setPanel(&_panel_instance);
     }
 };
 
