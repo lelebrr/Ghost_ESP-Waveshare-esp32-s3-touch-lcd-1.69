@@ -11,15 +11,16 @@
 
 // nimble
 #ifndef CONFIG_IDF_TARGET_ESP32S2
-#include <BLEDevice.h>
+// #include <BLEDevice.h> // Disabled for now
 #endif
 
 #define MAX_PINEAP_NETWORKS 20
 #define MAX_SSIDS_PER_BSSID 10
 #define RECENT_SSID_COUNT 5
+#define MAX_WPS_NETWORKS 20
 
 // PineAP detection structures
-typedef struct {
+typedef struct pineap_network_t {
   uint8_t bssid[6];
   uint8_t ssid_count;
   bool is_pineap;
@@ -40,7 +41,7 @@ typedef struct {
   int ssid_count;
   int8_t channel;
   int8_t rssi;
-  struct pineap_network_t *network; // Add network pointer
+  pineap_network_t *network; // Add network pointer
 } pineap_log_data_t;
 
 // PineAP detection control functions
@@ -57,8 +58,10 @@ void wifi_probe_scan_callback(void *buf, wifi_promiscuous_pkt_type_t type);
 void wifi_raw_scan_callback(void *buf, wifi_promiscuous_pkt_type_t type);
 void wifi_eapol_scan_callback(void *buf, wifi_promiscuous_pkt_type_t type);
 void wardriving_scan_callback(void *buf, wifi_promiscuous_pkt_type_t type);
-void ble_wardriving_callback(void *event, void *arg);
-void ble_skimmer_scan_callback(void *event, void *arg);
+// #ifdef DISABLED_FOR_NOW
+// void ble_wardriving_callback(void *event, void *arg);
+// void ble_skimmer_scan_callback(void *event, void *arg);
+// #endif
 void gps_event_handler(void *event_handler_arg, esp_event_base_t event_base,
                        int32_t event_id, void *event_data);
 void wifi_stations_sniffer_callback(void *buf,

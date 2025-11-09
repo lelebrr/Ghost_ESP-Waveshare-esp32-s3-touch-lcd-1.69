@@ -47,6 +47,7 @@ static const char *suspicious_names[] = {
     "HC-03", "HC-05", "HC-06",  "HC-08",    "BT-HC05", "JDY-31",
     "AT-09", "HM-10", "CC41-A", "MLT-BT05", "SPP-CA",  "FFD0"};
 
+#define MAX_WPS_NETWORKS 20
 wps_network_t detected_wps_networks[MAX_WPS_NETWORKS];
 int detected_network_count = 0;
 esp_timer_handle_t stop_timer;
@@ -191,7 +192,7 @@ void stop_pineap_detection(void) {
 
 void log_pineap_detection(void *arg) {
     pineap_log_data_t *log_data = (pineap_log_data_t *)arg;
-    pineap_network_t *network = log_data->network;
+    pineap_network_t *network = (pineap_network_t *)log_data->network;
 
     vTaskDelay(pdMS_TO_TICKS(5000));
 
@@ -231,10 +232,10 @@ void log_pineap_detection(void *arg) {
             if (i != (network - pineap_networks) && // Skip self
                 strcasecmp(network->recent_ssids[0], pineap_networks[i].recent_ssids[0]) == 0) {
                 IRAM_PRINTF("Evil Twin:\nSSID '%.100s'\nBSSID %.17s vs %.100s\n",
-                           network->recent_ssids[0], mac_str, pineap_networks[i].bssid);
+                           network->recent_ssids[0], mac_str, (char *)pineap_networks[i].bssid);
                 TERMINAL_VIEW_ADD_TEXT(
                     "Evil Twin Detected:\nSame SSID '%.100s'\nfrom BSSID %.17s and\n%.100s\n",
-                    network->recent_ssids[0], mac_str, pineap_networks[i].bssid);
+                    network->recent_ssids[0], mac_str, (char *)pineap_networks[i].bssid);
             }
         }
 
@@ -259,7 +260,7 @@ static void start_log_task(pineap_network_t *network, const char *new_ssid, int8
         vTaskDelete(existing_handle);    // Clean up existing task
     }
 
-    pineap_log_data_t *log_data = malloc(sizeof(pineap_log_data_t));
+    pineap_log_data_t *log_data = (pineap_log_data_t *)malloc(sizeof(pineap_log_data_t));
     if (!log_data)
         return;
 
@@ -310,7 +311,7 @@ void wifi_pineap_detector_callback(void *buf, wifi_promiscuous_pkt_type_t type) 
 
     const wifi_promiscuous_pkt_t *ppkt = (wifi_promiscuous_pkt_t *)buf;
     const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)ppkt->payload;
-    const wifi_ieee80211_mac_hdr_t *hdr = &ipkt->hdr;
+    const wifi_ieee80211_mac_hdr_t *hdr = (const wifi_ieee80211_mac_hdr_t *)&ipkt->hdr;
 
     // Only process beacon frames
     if (!is_beacon_packet(ppkt))
@@ -371,12 +372,12 @@ void wifi_pineap_detector_callback(void *buf, wifi_promiscuous_pkt_type_t type) 
 
             // Create new logging task if previous one has completed
             if (network->log_task_handle == NULL) {
-                pineap_log_data_t *log_data = malloc(sizeof(pineap_log_data_t));
+                pineap_log_data_t *log_data = (pineap_log_data_t *)malloc(sizeof(pineap_log_data_t));
                 if (!log_data)
                     return;
 
                 memcpy(log_data->bssid, network->bssid, 6);
-                log_data->network = network; // Pass network pointer for up-to-date info
+                log_data->network = (struct pineap_network_t*)network; // Pass network pointer for up-to-date info
 
                 BaseType_t result = xTaskCreate(log_pineap_detection, "pineap_log", 4096, log_data,
                                                 1, &network->log_task_handle);
@@ -509,7 +510,7 @@ void wardriving_scan_callback(void *buf, wifi_promiscuous_pkt_type_t type) {
 
     const wifi_promiscuous_pkt_t *pkt = (wifi_promiscuous_pkt_t *)buf;
     const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)pkt->payload;
-    const wifi_ieee80211_mac_hdr_t *hdr = &ipkt->hdr;
+    const wifi_ieee80211_mac_hdr_t *hdr = (const wifi_ieee80211_mac_hdr_t *)&ipkt->hdr;
 
     const uint8_t *payload = pkt->payload;
     int len = pkt->rx_ctrl.sig_len;
@@ -656,7 +657,7 @@ void wifi_wps_detection_callback(void *buf, wifi_promiscuous_pkt_type_t type) {
 
     const wifi_promiscuous_pkt_t *pkt = (wifi_promiscuous_pkt_t *)buf;
     const wifi_ieee80211_packet_t *ipkt = (wifi_ieee80211_packet_t *)pkt->payload;
-    const wifi_ieee80211_mac_hdr_t *hdr = &ipkt->hdr;
+    const wifi_ieee80211_mac_hdr_t *hdr = (const wifi_ieee80211_mac_hdr_t *)&ipkt->hdr;
 
     const uint8_t *payload = pkt->payload;
     int len = pkt->rx_ctrl.sig_len;
@@ -758,169 +759,6 @@ void wifi_wps_detection_callback(void *buf, wifi_promiscuous_pkt_type_t type) {
         }
 
         index += (2 + ie_len);
-    }
-}
-
-#ifndef CONFIG_IDF_TARGET_ESP32S2
-// Forward declare the struct and callback before use
-struct ble_hs_adv_field;
-static int ble_hs_adv_parse_fields_cb(const struct ble_hs_adv_field *field, void *arg);
-
-void ble_wardriving_callback(struct ble_gap_event *event, void *arg) {
-    if (!event || event->type != BLE_GAP_EVENT_DISC) {
-        return;
-    }
-
-    wardriving_data_t wardriving_data = {0};
-    wardriving_data.ble_data.is_ble_device = true;
-
-    // Get BLE MAC and RSSI
-    snprintf(wardriving_data.ble_data.ble_mac, sizeof(wardriving_data.ble_data.ble_mac),
-             "%02x:%02x:%02x:%02x:%02x:%02x", event->disc.addr.val[0], event->disc.addr.val[1],
-             event->disc.addr.val[2], event->disc.addr.val[3], event->disc.addr.val[4],
-             event->disc.addr.val[5]);
-
-    wardriving_data.ble_data.ble_rssi = event->disc.rssi;
-
-    // Parse BLE name if available
-    if (event->disc.length_data > 0) {
-        ble_hs_adv_parse(event->disc.data, event->disc.length_data, ble_hs_adv_parse_fields_cb,
-                         &wardriving_data);
-    }
-
-    // Get GPS data from the global handle
-    gps_t *gps = &((esp_gps_t *)nmea_hdl)->parent;
-    if (gps != NULL && gps->valid) {
-        wardriving_data.gps_quality.satellites_used = gps->sats_in_use;
-        wardriving_data.gps_quality.hdop = gps->dop_h;
-        wardriving_data.gps_quality.speed = gps->speed;
-        wardriving_data.gps_quality.course = gps->cog;
-        wardriving_data.gps_quality.fix_quality = gps->fix;
-        wardriving_data.gps_quality.has_valid_fix = (gps->fix >= GPS_FIX_GPS);
-    }
-
-    // Use GPS manager to log data
-    esp_err_t err = gps_manager_log_wardriving_data(&wardriving_data);
-    if (err != ESP_OK) {
-        ESP_LOGD("BLE_WD", "Skipped logging entry\nGPS data not ready");
-    }
-}
-
-// Move the callback implementation inside the ESP32S2 guard
-static int ble_hs_adv_parse_fields_cb(const struct ble_hs_adv_field *field, void *arg) {
-    wardriving_data_t *data = (wardriving_data_t *)arg;
-
-    if (field->type == BLE_HS_ADV_TYPE_COMP_NAME) {
-        size_t name_len = MIN(field->length, sizeof(data->ble_data.ble_name) - 1);
-        memcpy(data->ble_data.ble_name, field->value, name_len);
-        data->ble_data.ble_name[name_len] = '\0';
-    }
-
-    return 0;
-}
-#endif
-
-// wrap for esp32s2
-#ifndef CONFIG_IDF_TARGET_ESP32S2
-
-static const int suspicious_names_count = sizeof(suspicious_names) / sizeof(suspicious_names[0]);
-void ble_skimmer_scan_callback(struct ble_gap_event *event, void *arg) {
-    if (!event || event->type != BLE_GAP_EVENT_DISC) {
-        return;
-    }
-
-    struct ble_hs_adv_fields fields;
-    int rc = ble_hs_adv_parse_fields(&fields, event->disc.data, event->disc.length_data);
-
-    if (rc != 0) {
-        ESP_LOGD(SKIMMER_TAG, "Failed to parse advertisement data");
-        return;
-    }
-
-    // Check device name
-    if (fields.name != NULL && fields.name_len > 0) {
-        char device_name[32] = {0};
-        size_t name_len = MIN(fields.name_len, sizeof(device_name) - 1);
-        memcpy(device_name, fields.name, name_len);
-
-        // Check against suspicious names
-        for (int i = 0; i < suspicious_names_count; i++) {
-            if (strcasecmp(device_name, suspicious_names[i]) == 0) {
-                char mac_addr[18];
-                snprintf(mac_addr, sizeof(mac_addr), "%02x:%02x:%02x:%02x:%02x:%02x",
-                         event->disc.addr.val[0], event->disc.addr.val[1], event->disc.addr.val[2],
-                         event->disc.addr.val[3], event->disc.addr.val[4], event->disc.addr.val[5]);
-
-                IRAM_PRINTF("\nPOTENTIAL SKIMMER DETECTED!\n");
-                TERMINAL_VIEW_ADD_TEXT("\nPOTENTIAL SKIMMER DETECTED!\n");
-
-                IRAM_PRINTF("Device Name: %s\n", device_name);
-                TERMINAL_VIEW_ADD_TEXT("Device Name: ");
-                TERMINAL_VIEW_ADD_TEXT(device_name);
-                TERMINAL_VIEW_ADD_TEXT("\n");
-
-                IRAM_PRINTF("MAC Address: %s\n", mac_addr);
-                TERMINAL_VIEW_ADD_TEXT("MAC Address: ");
-                TERMINAL_VIEW_ADD_TEXT(mac_addr);
-                TERMINAL_VIEW_ADD_TEXT("\n");
-
-                IRAM_PRINTF("RSSI: %d dBm\n", event->disc.rssi);
-                TERMINAL_VIEW_ADD_TEXT("RSSI: ");
-                char rssi_str[12];
-                snprintf(rssi_str, sizeof(rssi_str), "%d", event->disc.rssi);
-                TERMINAL_VIEW_ADD_TEXT(rssi_str);
-                TERMINAL_VIEW_ADD_TEXT(" dBm\n");
-
-                IRAM_PRINTF("Reason:\nMatched known skimmer pattern: %s\n", suspicious_names[i]);
-                TERMINAL_VIEW_ADD_TEXT("Reason:\nMatched known skimmer pattern: ");
-                TERMINAL_VIEW_ADD_TEXT(suspicious_names[i]);
-                TERMINAL_VIEW_ADD_TEXT("\n");
-
-                IRAM_PRINTF("Please verify before taking action.\n\n");
-                TERMINAL_VIEW_ADD_TEXT("Please verify before taking action.\n\n");
-
-                // pulse rgb red once when skimmer is detected
-                pulse_once(&rgb_manager, 255, 0, 0);
-
-                // Create enhanced PCAP packet with metadata
-                if (pcap_file != NULL) {
-                    // Format: [Timestamp][MAC][RSSI][Name][Raw Data]
-                    uint8_t enhanced_packet[256] = {0};
-                    size_t packet_len = 0;
-
-                    // Add MAC address
-                    memcpy(enhanced_packet + packet_len, event->disc.addr.val, 6);
-                    packet_len += 6;
-
-                    // Add RSSI
-                    enhanced_packet[packet_len++] = (uint8_t)event->disc.rssi;
-
-                    // Add device name length and name
-                    enhanced_packet[packet_len++] = (uint8_t)name_len;
-                    memcpy(enhanced_packet + packet_len, device_name, name_len);
-                    packet_len += name_len;
-
-                    // Add reason for flagging
-                    const char *reason = suspicious_names[i];
-                    uint8_t reason_len = strlen(reason);
-                    enhanced_packet[packet_len++] = reason_len;
-                    memcpy(enhanced_packet + packet_len, reason, reason_len);
-                    packet_len += reason_len;
-
-                    // Add raw advertisement data
-                    memcpy(enhanced_packet + packet_len, event->disc.data, event->disc.length_data);
-                    packet_len += event->disc.length_data;
-
-                    // Write to PCAP with proper BLE packet format
-                    pcap_write_packet_to_buffer(enhanced_packet, packet_len,
-                                                PCAP_CAPTURE_BLUETOOTH);
-
-                    // Force flush to ensure suspicious device is captured
-                    pcap_flush_buffer_to_file();
-                }
-                break;
-            }
-        }
     }
 }
 #endif

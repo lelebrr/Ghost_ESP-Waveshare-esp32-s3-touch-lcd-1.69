@@ -221,7 +221,7 @@ void discover_task(void *pvParameter) {
 void handle_stop_flipper(int argc, char **argv) {
     wifi_manager_stop_deauth();
 #ifndef CONFIG_IDF_TARGET_ESP32S2
-    ble_stop();
+    // ble_stop(); // Disabled for now
 #endif
     if (buffer_offset > 0) { // Only flush if there's data in buffer
         csv_flush_buffer_to_file();
@@ -376,6 +376,7 @@ void handle_wifi_connection(int argc, char **argv) {
 #ifndef CONFIG_IDF_TARGET_ESP32S2
 
 void handle_ble_scan_cmd(int argc, char **argv) {
+#ifdef DISABLED_FOR_NOW
     if (argc > 1 && strcmp(argv[1], "-f") == 0) {
         printf("Starting Find the Flippers.\n");
         TERMINAL_VIEW_ADD_TEXT("Starting Find the Flippers.\n");
@@ -413,6 +414,9 @@ void handle_ble_scan_cmd(int argc, char **argv) {
 
     printf("Invalid Command Syntax.\n");
     TERMINAL_VIEW_ADD_TEXT("Invalid Command Syntax.\n");
+#else
+    printf("Bluetooth is currently disabled.\n");
+#endif
 }
 
 #endif
@@ -747,12 +751,13 @@ void handle_capture_scan(int argc, char **argv) {
         TERMINAL_VIEW_ADD_TEXT("Stopping packet capture...\n");
         wifi_manager_stop_monitor_mode();
 #ifndef CONFIG_IDF_TARGET_ESP32S2
-        ble_stop();
-        ble_stop_skimmer_detection();
+        // ble_stop();
+        // ble_stop_skimmer_detection();
 #endif
         pcap_file_close();
     }
 #ifndef CONFIG_IDF_TARGET_ESP32S2
+#ifdef DISABLED_FOR_NOW
     if (strcmp(capturetype, "-ble") == 0) {
         printf("Starting BLE packet capture...\n");
         TERMINAL_VIEW_ADD_TEXT("Starting BLE packet capture...\n");
@@ -774,6 +779,7 @@ void handle_capture_scan(int argc, char **argv) {
         ble_start_skimmer_detection();
 
     }
+#endif
 #endif
 }
 
@@ -1190,6 +1196,7 @@ void handle_gps_info(int argc, char **argv) {
 
 #ifndef CONFIG_IDF_TARGET_ESP32S2
 void handle_ble_wardriving(int argc, char **argv) {
+#ifdef DISABLED_FOR_NOW
     bool stop_flag = false;
 
     for (int i = 1; i < argc; i++) {
@@ -1225,6 +1232,9 @@ void handle_ble_wardriving(int argc, char **argv) {
         printf("BLE wardriving started.\n");
         TERMINAL_VIEW_ADD_TEXT("BLE wardriving started.\n");
     }
+#else
+    printf("Bluetooth is currently disabled.\n");
+#endif
 }
 #endif
 
@@ -1470,8 +1480,10 @@ void register_commands() {
     register_command("gpsinfo", handle_gps_info);
     register_command("scanports", handle_scan_ports);
 #ifndef CONFIG_IDF_TARGET_ESP32S2
+#ifdef DISABLED_FOR_NOW
     register_command("blescan", handle_ble_scan_cmd);
     register_command("blewardriving", handle_ble_wardriving);
+#endif
 #endif
 #ifdef DEBUG
     register_command("crash", handle_crash); // For Debugging

@@ -59,7 +59,7 @@ static esp_err_t scan_directory(const char *base_path, cJSON *json_array) {
     while ((entry = readdir(dir)) != NULL) {
         // Dynamically allocate memory for full_path
         size_t full_path_len = strlen(base_path) + strlen(entry->d_name) + 2; // +2 for '/' and '\0'
-        char *full_path = malloc(full_path_len);
+        char *full_path = (char *)malloc(full_path_len);
         if (!full_path) {
             ESP_LOGE(TAG, "Failed to allocate memory for full path.");
             closedir(dir);
@@ -199,7 +199,7 @@ static esp_err_t api_sd_card_post_handler(httpd_req_t *req) {
     size_t file_size = file_stat.st_size;
 
     // Allocate memory for the buffer
-    char *file_buf = malloc(file_size);
+    char *file_buf = (char *)malloc(file_size);
     if (!file_buf) {
         ESP_LOGE(TAG, "Failed to allocate memory for file buffer.");
         fclose(file);
@@ -246,7 +246,7 @@ esp_err_t get_query_param(httpd_req_t *req, const char *key, char *value, size_t
     size_t query_len = httpd_req_get_url_query_len(req) + 1;
 
     if (query_len > 1) { // >1 because query string starts with '?'
-        char *query = malloc(query_len);
+        char *query = (char *)malloc(query_len);
         if (!query) {
             ESP_LOGE(TAG, "Failed to allocate memory for query string.");
             return ESP_ERR_NO_MEM;
@@ -348,7 +348,7 @@ static esp_err_t api_sd_card_upload_handler(httpd_req_t *req) {
 
     // Allocate memory for the boundary
     size_t boundary_len = strlen(boundary_start) + 3; // +3 for "--" and null terminator
-    char *boundary = malloc(boundary_len);
+    char *boundary = (char *)malloc(boundary_len);
     if (!boundary) {
         ESP_LOGE(TAG, "Failed to allocate memory for boundary.");
         httpd_resp_set_status(req, "500 Internal Server Error");
@@ -360,7 +360,7 @@ static esp_err_t api_sd_card_upload_handler(httpd_req_t *req) {
     ESP_LOGD(TAG, "Parsed boundary: %s", boundary);
 
     // Allocate memory for the buffer
-    char *buf = malloc(BUFFER_SIZE + 1); // +1 for null-terminator
+    char *buf = (char *)malloc(BUFFER_SIZE + 1); // +1 for null-terminator
     if (!buf) {
         ESP_LOGE(TAG, "Failed to allocate memory for request buffer.");
         free(boundary);
@@ -371,7 +371,7 @@ static esp_err_t api_sd_card_upload_handler(httpd_req_t *req) {
     }
 
     FILE *file = NULL;
-    char *file_path = malloc(MAX_PATH_LENGTH + 128); // Allocate heap memory for file_path
+    char *file_path = (char *)malloc(MAX_PATH_LENGTH + 128); // Allocate heap memory for file_path
     if (!file_path) {
         ESP_LOGE(TAG, "Failed to allocate memory for file path.");
         free(buf);
@@ -545,8 +545,8 @@ esp_err_t ap_manager_init(void) {
         .ap =
             {
                 .channel = 6,
-                .max_connection = 4,
                 .authmode = WIFI_AUTH_WPA2_PSK,
+                .max_connection = 4,
                 .beacon_interval = 100,
             },
     };
@@ -1117,7 +1117,7 @@ static esp_err_t api_settings_handler(httpd_req_t *req) {
     int total_len = req->content_len;
     int cur_len = 0;
     int received = 0;
-    char *buf = malloc(total_len + 1);
+    char *buf = (char *)malloc(total_len + 1);
     if (!buf) {
         printf("Failed to allocate memory for JSON payload\n");
         return ESP_FAIL;

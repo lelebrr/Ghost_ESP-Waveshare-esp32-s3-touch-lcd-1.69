@@ -96,12 +96,12 @@ char *getlistId(const char *input) {
 }
 
 esp_err_t _http_event_handler(esp_http_client_event_t *evt) {
-  response_buffer_t *resp_buf = evt->user_data;
+  response_buffer_t *resp_buf = (response_buffer_t *)evt->user_data;
   switch (evt->event_id) {
   case HTTP_EVENT_ON_DATA:
     if (resp_buf->buffer_len + evt->data_len >= resp_buf->buffer_size) {
       resp_buf->buffer_size += evt->data_len;
-      char *new_buffer = realloc(resp_buf->buffer, resp_buf->buffer_size);
+      char *new_buffer = (char *)realloc(resp_buf->buffer, resp_buf->buffer_size);
       if (new_buffer == NULL) {
         ESP_LOGE(TAG, "Failed to allocate memory for response buffer");
         return ESP_FAIL;
@@ -132,7 +132,7 @@ BindSession_Params_t parse_response(const char *response_body) {
 
 char *url_encode(const char *str) {
   const char *hex = "0123456789ABCDEF";
-  char *encoded = malloc(strlen(str) * 3 + 1); // Worst case scenario
+  char *encoded = (char *)malloc(strlen(str) * 3 + 1); // Worst case scenario
   char *pencoded = encoded;
   if (!encoded) {
     ESP_LOGE(TAG, "Failed to allocate memory for URL encoding");
@@ -170,7 +170,7 @@ char *generate_uuid() {
 
 char *generate_zx() {
   static const char alphanum[] = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-  char *zx = malloc(17);
+  char *zx = (char *)malloc(17);
   if (!zx) {
     ESP_LOGE(TAG, "Failed to allocate memory for zx");
     return NULL;
@@ -207,7 +207,7 @@ char *extract_application_url(const char *headers) {
   }
 
   size_t url_len = url_end - url_start;
-  char *application_url = malloc(url_len + 1);
+  char *application_url = (char *)malloc(url_len + 1);
   if (application_url) {
     strncpy(application_url, url_start, url_len);
     application_url[url_len] = '\0'; // Null-terminate the URL
@@ -267,7 +267,7 @@ esp_err_t send_command(const char *command, const char *video_id,
   ESP_LOGI(TAG, "Body Parameters: %s", body_params);
 
   response_buffer_t resp_buf = {
-      .buffer = malloc(1524), .buffer_len = 0, .buffer_size = 1524};
+      .buffer = (char *)malloc(1524), .buffer_len = 0, .buffer_size = 1524};
   if (!resp_buf.buffer) {
     ESP_LOGE(TAG, "Failed to allocate memory for response buffer.");
     goto cleanup;
@@ -277,7 +277,7 @@ esp_err_t send_command(const char *command, const char *video_id,
   esp_http_client_config_t config = {
       .url = "https://www.youtube.com/api/lounge/bc/bind",
       .timeout_ms = 5000,
-      .crt_bundle_attach = esp_crt_bundle_attach,
+      .crt_bundle_attach = arduino_esp_crt_bundle_attach,
       .transport_type = HTTP_TRANSPORT_OVER_SSL,
       .event_handler = _http_event_handler,
       .user_data = &resp_buf,
@@ -367,7 +367,7 @@ esp_err_t bind_session_id(Device *device) {
            "https://www.youtube.com/api/lounge/bc/bind", url_params);
 
   response_buffer_t resp_buf = {
-      .buffer = malloc(1524), .buffer_len = 0, .buffer_size = 1524};
+      .buffer = (char *)malloc(1524), .buffer_len = 0, .buffer_size = 1524};
   if (resp_buf.buffer == NULL) {
     ESP_LOGE(TAG, "Failed to allocate memory for response buffer");
     return ESP_FAIL;
@@ -376,7 +376,7 @@ esp_err_t bind_session_id(Device *device) {
   esp_http_client_config_t config = {
       .url = "https://www.youtube.com/api/lounge/bc/bind",
       .timeout_ms = 5000,
-      .crt_bundle_attach = esp_crt_bundle_attach,
+      .crt_bundle_attach = arduino_esp_crt_bundle_attach,
       .transport_type = HTTP_TRANSPORT_OVER_SSL,
       .event_handler = _http_event_handler,
       .user_data = &resp_buf,
@@ -413,7 +413,7 @@ esp_err_t bind_session_id(Device *device) {
   if (resp_buf.buffer_len < resp_buf.buffer_size) {
     resp_buf.buffer[resp_buf.buffer_len] = '\0';
   } else {
-    char *new_buffer = realloc(resp_buf.buffer, resp_buf.buffer_size + 1);
+    char *new_buffer = (char *)realloc(resp_buf.buffer, resp_buf.buffer_size + 1);
     if (new_buffer == NULL) {
       ESP_LOGE(TAG, "Failed to allocate memory for null terminator");
       esp_http_client_cleanup(client);
@@ -492,7 +492,7 @@ char *extract_token_from_json(const char *json_response) {
 
 char *get_youtube_token(const char *screen_id) {
   response_buffer_t resp_buf = {
-      .buffer = malloc(1024), .buffer_len = 0, .buffer_size = 1024};
+      .buffer = (char *)malloc(1024), .buffer_len = 0, .buffer_size = 1024};
   if (resp_buf.buffer == NULL) {
     ESP_LOGE(TAG, "Failed to allocate memory for response buffer");
     return NULL;
@@ -502,7 +502,7 @@ char *get_youtube_token(const char *screen_id) {
   esp_http_client_config_t config = {
       .url =
           "https://www.youtube.com/api/lounge/pairing/get_lounge_token_batch",
-      .crt_bundle_attach = esp_crt_bundle_attach,
+      .crt_bundle_attach = arduino_esp_crt_bundle_attach,
       .timeout_ms = 10000,
       .method = HTTP_METHOD_POST,
       .transport_type = HTTP_TRANSPORT_OVER_SSL,
@@ -552,7 +552,7 @@ char *get_youtube_token(const char *screen_id) {
     resp_buf.buffer[resp_buf.buffer_len] = '\0';
   } else {
     // Reallocate buffer to add null terminator
-    char *new_buffer = realloc(resp_buf.buffer, resp_buf.buffer_size + 1);
+    char *new_buffer = (char *)realloc(resp_buf.buffer, resp_buf.buffer_size + 1);
     if (new_buffer == NULL) {
       ESP_LOGE(TAG, "Failed to allocate memory for null terminator");
       esp_http_client_cleanup(client);
@@ -607,7 +607,7 @@ char *extract_screen_id(const char *xml_data) {
     return NULL;
   }
 
-  char *screen_id = malloc(screen_id_len + 1);
+  char *screen_id = (char *)malloc(screen_id_len + 1);
   if (screen_id) {
     strncpy(screen_id, start, screen_id_len);
     screen_id[screen_id_len] = '\0';
